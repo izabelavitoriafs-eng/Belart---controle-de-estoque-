@@ -88,10 +88,17 @@ void callbackMQTT(char *topic, byte *payload, unsigned int length)
 // Conecta ao Wi-Fi e ao Broker MQTT
 void conectarMQTT()
 {
+  // ID único por inicialização: no broker público, dois clientes com o mesmo ID
+  // derrubam um ao outro. No Wokwi, todas as simulações têm o mesmo MAC,
+  // por isso o sufixo é aleatório.
+  static String idCliente = "Belart_ESP32_" + String((unsigned long)random(0xFFFFFF), HEX);
+
   while (!mqttClient.connected())
   {
-    Serial.print("Conectando ao MQTT Broker...");
-    if (mqttClient.connect("Belart_ESP32_Client"))
+    Serial.print("Conectando ao MQTT Broker como ");
+    Serial.print(idCliente);
+    Serial.print("...");
+    if (mqttClient.connect(idCliente.c_str()))
     {
       Serial.println(" Conectado!");
       // Inscreve-se nos tópicos publicados pelo script Python
@@ -145,7 +152,13 @@ int contarUnidades(HX711 &balanca, Prateleira &p)
     // Publica o estado atualizado no MQTT para o App (Item, Qtd)
     String payloadPub = p.itemDetectadoIA + "," + String(unidades);
     String topicoPub = "belart/estoque/prateleira" + String(p.id);
-    mqttClient.publish(topicoPub.c_str(), payloadPub.c_str());
+    if (!mqttClient.publish(topicoPub.c_str(), payloadPub.c_str()))
+    {
+      Serial.print("Falha ao publicar em ");
+      Serial.print(topicoPub);
+      Serial.print(" | estado MQTT: ");
+      Serial.println(mqttClient.state());
+    }
 
     return unidades;
   }
@@ -154,6 +167,24 @@ int contarUnidades(HX711 &balanca, Prateleira &p)
     Serial.print("Aguardando leitura do HX711 da Prateleira ");
     Serial.println(p.id);
     return 0;
+  }
+}
+
+// Faz a tara somente se o HX711 responder em até 1 segundo.
+// Sem essa verificação, tare() espera indefinidamente e o ESP32 trava no setup().
+void tararBalanca(HX711 &balanca, int idPrateleira)
+{
+  if (balanca.wait_ready_timeout(1000))
+  {
+    balanca.tare();
+    Serial.print("Tara concluida na Prateleira ");
+    Serial.println(idPrateleira);
+  }
+  else
+  {
+    Serial.print("HX711 da Prateleira ");
+    Serial.print(idPrateleira);
+    Serial.println(" nao respondeu (tara nao realizada)");
   }
 }
 
@@ -188,13 +219,15 @@ void setup()
 
   // Escala calibrada para o Wokwi
   balancaPrateleira1.set_scale(420.0);
-  balancaPrateleira1.tare();
+  tararBalanca(balancaPrateleira1, 1);
 
   balancaPrateleira2.set_scale(420.0);
-  balancaPrateleira2.tare();
+  tararBalanca(balancaPrateleira2, 2);
 
   balancaPrateleira3.set_scale(420.0);
-  balancaPrateleira3.tare();
+  tararBalanca(balancaPrateleira3, 3);
+
+  Serial.println("Configuracao das balancas concluida!");
 }
 
 void loop()
