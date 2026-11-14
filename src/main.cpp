@@ -157,6 +157,24 @@ int contarUnidades(HX711 &balanca, Prateleira &p)
   }
 }
 
+// Faz a tara somente se o HX711 responder em até 1 segundo.
+// Sem essa verificação, tare() espera indefinidamente e o ESP32 trava no setup().
+void tararBalanca(HX711 &balanca, int idPrateleira)
+{
+  if (balanca.wait_ready_timeout(1000))
+  {
+    balanca.tare();
+    Serial.print("Tara concluida na Prateleira ");
+    Serial.println(idPrateleira);
+  }
+  else
+  {
+    Serial.print("HX711 da Prateleira ");
+    Serial.print(idPrateleira);
+    Serial.println(" nao respondeu (tara nao realizada)");
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -188,13 +206,15 @@ void setup()
 
   // Escala calibrada para o Wokwi
   balancaPrateleira1.set_scale(420.0);
-  balancaPrateleira1.tare();
+  tararBalanca(balancaPrateleira1, 1);
 
   balancaPrateleira2.set_scale(420.0);
-  balancaPrateleira2.tare();
+  tararBalanca(balancaPrateleira2, 2);
 
   balancaPrateleira3.set_scale(420.0);
-  balancaPrateleira3.tare();
+  tararBalanca(balancaPrateleira3, 3);
+
+  Serial.println("Configuracao das balancas concluida!");
 }
 
 void loop()
