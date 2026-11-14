@@ -5,9 +5,9 @@ Simula o que o camera.py publica e mostra o que o ESP32 responde.
 
 1. Assina belart/#: recebe de volta o que o proprio Python publica
    (prova que o broker recebeu) e o que o ESP32 publica em belart/estoque.
-2. Publica um produto em cada topico de visao (belart/visao/prateleira1..3),
-   exatamente como o camera.py faz.
-3. Fica escutando por 20 segundos e imprime tudo o que o ESP32 publicar.
+2. Publica um produto em cada topico de visao (belart/visao/prateleira1..3)
+   a cada 3 segundos, como o camera.py faz continuamente.
+3. Durante 30 segundos, imprime tudo o que o ESP32 publicar.
 
 Execute com a simulacao do Wokwi RODANDO:
     python python/teste_mqtt.py
@@ -29,7 +29,8 @@ PRODUTOS_TESTE = {
 TOPICO_VISAO = "belart/visao/prateleira{}"
 TOPICO_ESTOQUE = "belart/estoque/prateleira{}"
 
-TEMPO_ESCUTA = 20  # segundos
+TEMPO_ESCUTA = 30  # segundos
+INTERVALO_PUBLICACAO = 3  # segundos
 TEMPO_MAX_CONEXAO = 15  # segundos
 
 conectado = threading.Event()
@@ -79,14 +80,21 @@ if not conectado.wait(TEMPO_MAX_CONEXAO):
     raise SystemExit(1)
 time.sleep(1)  # margem para o broker registrar as inscricoes
 
-for id_prateleira, produto in PRODUTOS_TESTE.items():
-    topico = TOPICO_VISAO.format(id_prateleira)
-    resultado = client.publish(topico, produto)
-    status = "OK" if resultado.rc == mqtt.MQTT_ERR_SUCCESS else f"ERRO {resultado.rc}"
-    print(f"[Python -> broker] {topico} | Produto: {produto} | {status}")
+def publicar_produtos():
+    for id_prateleira, produto in PRODUTOS_TESTE.items():
+        topico = TOPICO_VISAO.format(id_prateleira)
+        resultado = client.publish(topico, produto)
+        status = "OK" if resultado.rc == mqtt.MQTT_ERR_SUCCESS else f"ERRO {resultado.rc}"
+        print(f"[Python -> broker] {topico} | Produto: {produto} | {status}")
 
-print(f"\nEscutando as respostas do ESP32 por {TEMPO_ESCUTA} segundos...\n")
-time.sleep(TEMPO_ESCUTA)
+
+# Publica repetidamente, como o camera.py faz a cada 15 quadros.
+# Assim o ESP32 recebe mesmo que conecte depois do inicio do teste.
+print(f"Publicando a cada {INTERVALO_PUBLICACAO} s durante {TEMPO_ESCUTA} s...\n")
+inicio = time.time()
+while time.time() - inicio < TEMPO_ESCUTA:
+    publicar_produtos()
+    time.sleep(INTERVALO_PUBLICACAO)
 
 client.loop_stop()
 client.disconnect()
