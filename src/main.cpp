@@ -88,10 +88,17 @@ void callbackMQTT(char *topic, byte *payload, unsigned int length)
 // Conecta ao Wi-Fi e ao Broker MQTT
 void conectarMQTT()
 {
+  // ID único por inicialização: no broker público, dois clientes com o mesmo ID
+  // derrubam um ao outro. No Wokwi, todas as simulações têm o mesmo MAC,
+  // por isso o sufixo é aleatório.
+  static String idCliente = "Belart_ESP32_" + String((unsigned long)random(0xFFFFFF), HEX);
+
   while (!mqttClient.connected())
   {
-    Serial.print("Conectando ao MQTT Broker...");
-    if (mqttClient.connect("Belart_ESP32_Client"))
+    Serial.print("Conectando ao MQTT Broker como ");
+    Serial.print(idCliente);
+    Serial.print("...");
+    if (mqttClient.connect(idCliente.c_str()))
     {
       Serial.println(" Conectado!");
       // Inscreve-se nos tópicos publicados pelo script Python
@@ -145,7 +152,13 @@ int contarUnidades(HX711 &balanca, Prateleira &p)
     // Publica o estado atualizado no MQTT para o App (Item, Qtd)
     String payloadPub = p.itemDetectadoIA + "," + String(unidades);
     String topicoPub = "belart/estoque/prateleira" + String(p.id);
-    mqttClient.publish(topicoPub.c_str(), payloadPub.c_str());
+    if (!mqttClient.publish(topicoPub.c_str(), payloadPub.c_str()))
+    {
+      Serial.print("Falha ao publicar em ");
+      Serial.print(topicoPub);
+      Serial.print(" | estado MQTT: ");
+      Serial.println(mqttClient.state());
+    }
 
     return unidades;
   }
