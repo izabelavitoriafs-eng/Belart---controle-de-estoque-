@@ -3,8 +3,8 @@ Belart Smart Stock - Teste de integracao MQTT (sem camera)
 
 Simula o que o camera.py publica e mostra o que o ESP32 responde.
 
-1. Assina os topicos de estoque (belart/estoque/prateleira1..3),
-   que sao os mesmos que o aplicativo vai assinar.
+1. Assina belart/#: recebe de volta o que o proprio Python publica
+   (prova que o broker recebeu) e o que o ESP32 publica em belart/estoque.
 2. Publica um produto em cada topico de visao (belart/visao/prateleira1..3),
    exatamente como o camera.py faz.
 3. Fica escutando por 20 segundos e imprime tudo o que o ESP32 publicar.
@@ -37,14 +37,20 @@ conectado = threading.Event()
 
 def ao_conectar(client, userdata, flags, reason_code, properties=None):
     print(f"Conectado ao broker (codigo: {reason_code})")
-    for id_prateleira in (1, 2, 3):
-        client.subscribe(TOPICO_ESTOQUE.format(id_prateleira))
-    print("Inscrito em belart/estoque/prateleira1, 2 e 3\n")
+    # belart/# inclui os topicos de visao (eco do proprio Python) e de estoque (ESP32)
+    client.subscribe("belart/#")
+    print("Inscrito em belart/# (visao + estoque)\n")
     conectado.set()
 
 
 def ao_receber(client, userdata, msg):
     texto = msg.payload.decode("utf-8", errors="replace")
+
+    if msg.topic.startswith("belart/visao/"):
+        # Eco: prova que o broker recebeu o que o Python publicou
+        print(f"[broker -> Python] {msg.topic} | Eco recebido: {texto}")
+        return
+
     partes = texto.split(",")
 
     if len(partes) == 2:
