@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "author": "Belart",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": -48,
+      "left": -52.76,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-hx711",
+      "id": "cell1",
+      "top": -26.2,
+      "left": 204.2,
+      "attrs": {
+        "type": "50kg"
+      }
+    },
+    {
+      "type": "wokwi-hx711",
+      "id": "cell2",
+      "top": 130,
+      "left": 204.2,
+      "attrs": {
+        "type": "50kg"
+      }
+    },
+    {
+      "type": "wokwi-hx711",
+      "id": "cell3",
+      "top": 286,
+      "left": 204.2,
+      "attrs": {
+        "type": "50kg"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "esp:3V3",
+      "cell1:VCC",
+      "red",
+      []
+    ],
+    [
+      "esp:GND.2",
+      "cell1:GND",
+      "black",
+      []
+    ],
+    [
+      "esp:19",
+      "cell1:DT",
+      "green",
+      []
+    ],
+    [
+      "esp:18",
+      "cell1:SCK",
+      "green",
+      []
+    ],
+    [
+      "esp:3V3",
+      "cell2:VCC",
+      "red",
+      []
+    ],
+    [
+      "esp:GND.2",
+      "cell2:GND",
+      "black",
+      []
+    ],
+    [
+      "esp:21",
+      "cell2:DT",
+      "green",
+      []
+    ],
+    [
+      "esp:22",
+      "cell2:SCK",
+      "green",
+      []
+    ],
+    [
+      "esp:3V3",
+      "cell3:VCC",
+      "red",
+      []
+    ],
+    [
+      "esp:GND.2",
+      "cell3:GND",
+      "black",
+      []
+    ],
+    [
+      "esp:25",
+      "cell3:DT",
+      "green",
+      []
+    ],
+    [
+      "esp:26",
+      "cell3:SCK",
+      "green",
+      []
+    ]
+  ],
+  "dependencies": {}
+}
