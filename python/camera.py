@@ -40,13 +40,11 @@ model = YOLOWorld("yolov8s-world.pt")
 CLASSES_BUSCADAS = [
     "mug",
     "bottle",
-    "tile",
 ]
 
 TRADUCAO_CLASSES = {
     "mug": "Caneca",
     "bottle": "Garrafa",
-    "tile": "Azulejo",
 }
 
 model.set_classes(CLASSES_BUSCADAS)
