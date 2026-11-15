@@ -49,9 +49,11 @@ src/
 platformio.ini     # configuração do PlatformIO (esp32dev, Arduino)
 diagram.json       # circuito do Wokwi (ESP32 + 3 HX711)
 wokwi.toml         # aponta para o firmware compilado
+belartbh/          # aplicativo React Native (Expo)
+site/              # painel web (React + Vite)
 ```
 
-O aplicativo React Native está sendo desenvolvido por outros colaboradores e será adicionado depois.
+O aplicativo e o painel web recebem os mesmos dados de estoque pelo broker MQTT. Instruções de cada um: `belartbh/README.md` e `site/README.md`.
 
 ## Como executar
 
