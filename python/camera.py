@@ -123,9 +123,14 @@ def identificar_prateleiras(resultado, altura_imagem):
             or confianca > deteccao_atual["confianca"]
         ):
 
+            # Posição do centro em % da imagem (diagnóstico)
+            altura_orig, largura_orig = resultado.orig_shape[:2]
+
             deteccoes[id_prateleira] = {
                 "classe": nome_portugues,
-                "confianca": confianca
+                "confianca": confianca,
+                "pos_x": ((x1 + x2) / 2) / largura_orig,
+                "pos_y": centro_y / altura_orig
             }
 
     return deteccoes
@@ -250,10 +255,20 @@ try:
 
                 if resultado_mqtt.rc == mqtt.MQTT_ERR_SUCCESS:
 
+                    # Posição na imagem: 0% = topo/esquerda, 100% = base/direita.
+                    # Prateleira 1: Y < 33% | 2: 33% a 66% | 3: Y > 66%
+                    posicao = ""
+                    if deteccao is not None:
+                        posicao = (
+                            f" | Posicao X: {deteccao['pos_x']:.0%}"
+                            f" Y: {deteccao['pos_y']:.0%}"
+                        )
+
                     print(
                         f"[YOLO -> MQTT] Prateleira {id_prateleira} "
                         f"| Produto: {mensagem} "
                         f"| Confianca: {confianca:.2f}"
+                        f"{posicao}"
                     )
 
                 else:
