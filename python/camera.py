@@ -155,6 +155,17 @@ frame_counter = 0
 
 INTERVALO_PUBLICACAO = 15
 
+# Quantos ciclos de publicação seguidos sem detecção são necessários
+# para confirmar "Nenhum" (3 ciclos x 15 quadros = 45 quadros).
+# Evita que uma perda momentânea da câmera zere o estoque no ESP32.
+CICLOS_PARA_CONFIRMAR_NENHUM = 3
+
+ciclos_sem_deteccao = {
+    1: 0,
+    2: 0,
+    3: 0
+}
+
 
 # EXECUÇÃO CONTÍNUA DA CÂMERA E DA IA
 
@@ -205,10 +216,26 @@ try:
                     # Produto identificado na prateleira
                     mensagem = deteccao["classe"]
                     confianca = deteccao["confianca"]
+                    ciclos_sem_deteccao[id_prateleira] = 0
 
                 else:
 
-                    # Nenhum produto identificado
+                    ciclos_sem_deteccao[id_prateleira] += 1
+                    ciclos = ciclos_sem_deteccao[id_prateleira]
+
+                    if ciclos < CICLOS_PARA_CONFIRMAR_NENHUM:
+
+                        # Ausência momentânea: não publica, e o ESP32
+                        # mantém o último produto válido da prateleira
+                        print(
+                            f"[YOLO] Prateleira {id_prateleira} "
+                            f"| Sem deteccao ({ciclos}/"
+                            f"{CICLOS_PARA_CONFIRMAR_NENHUM}) "
+                            f"| Mantendo ultimo produto"
+                        )
+                        continue
+
+                    # Ausência confirmada
                     mensagem = "Nenhum"
                     confianca = 0.0
 
