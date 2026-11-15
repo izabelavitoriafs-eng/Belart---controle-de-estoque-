@@ -123,9 +123,14 @@ def identificar_prateleiras(resultado, altura_imagem):
             or confianca > deteccao_atual["confianca"]
         ):
 
+            # Posição do centro em % da imagem (diagnóstico)
+            altura_orig, largura_orig = resultado.orig_shape[:2]
+
             deteccoes[id_prateleira] = {
                 "classe": nome_portugues,
-                "confianca": confianca
+                "confianca": confianca,
+                "pos_x": ((x1 + x2) / 2) / largura_orig,
+                "pos_y": centro_y / altura_orig
             }
 
     return deteccoes
@@ -154,6 +159,17 @@ print("Pressione Q para encerrar.")
 frame_counter = 0
 
 INTERVALO_PUBLICACAO = 15
+
+# Quantos ciclos de publicação seguidos sem detecção são necessários
+# para confirmar "Nenhum" (3 ciclos x 15 quadros = 45 quadros).
+# Evita que uma perda momentânea da câmera zere o estoque no ESP32.
+CICLOS_PARA_CONFIRMAR_NENHUM = 3
+
+ciclos_sem_deteccao = {
+    1: 0,
+    2: 0,
+    3: 0
+}
 
 
 # EXECUÇÃO CONTÍNUA DA CÂMERA E DA IA
@@ -205,10 +221,26 @@ try:
                     # Produto identificado na prateleira
                     mensagem = deteccao["classe"]
                     confianca = deteccao["confianca"]
+                    ciclos_sem_deteccao[id_prateleira] = 0
 
                 else:
 
-                    # Nenhum produto identificado
+                    ciclos_sem_deteccao[id_prateleira] += 1
+                    ciclos = ciclos_sem_deteccao[id_prateleira]
+
+                    if ciclos < CICLOS_PARA_CONFIRMAR_NENHUM:
+
+                        # Ausência momentânea: não publica, e o ESP32
+                        # mantém o último produto válido da prateleira
+                        print(
+                            f"[YOLO] Prateleira {id_prateleira} "
+                            f"| Sem deteccao ({ciclos}/"
+                            f"{CICLOS_PARA_CONFIRMAR_NENHUM}) "
+                            f"| Mantendo ultimo produto"
+                        )
+                        continue
+
+                    # Ausência confirmada
                     mensagem = "Nenhum"
                     confianca = 0.0
 
@@ -223,10 +255,20 @@ try:
 
                 if resultado_mqtt.rc == mqtt.MQTT_ERR_SUCCESS:
 
+                    # Posição na imagem: 0% = topo/esquerda, 100% = base/direita.
+                    # Prateleira 1: Y < 33% | 2: 33% a 66% | 3: Y > 66%
+                    posicao = ""
+                    if deteccao is not None:
+                        posicao = (
+                            f" | Posicao X: {deteccao['pos_x']:.0%}"
+                            f" Y: {deteccao['pos_y']:.0%}"
+                        )
+
                     print(
                         f"[YOLO -> MQTT] Prateleira {id_prateleira} "
                         f"| Produto: {mensagem} "
                         f"| Confianca: {confianca:.2f}"
+                        f"{posicao}"
                     )
 
                 else:
