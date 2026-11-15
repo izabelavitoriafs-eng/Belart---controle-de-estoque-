@@ -52,8 +52,6 @@ float obterPesoUnitario(String item)
     return 352.0;
   if (item == "Garrafa")
     return 500.0;
-  if (item == "Azulejo")
-    return 250.0;
   return 0.0; // Se o item for desconhecido ou não cadastrado
 }
 
