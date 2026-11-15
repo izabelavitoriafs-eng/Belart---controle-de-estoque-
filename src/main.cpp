@@ -24,6 +24,9 @@ PubSubClient mqttClient(espClient);
 #define Prateleira3_HX711_DT 25
 #define Prateleira3_HX711_SCK 26
 
+// Fator de escala em gramas (ver setup)
+const float ESCALA_GRAMAS = 21000.0 / 50000.0; // 0.42
+
 HX711 balancaPrateleira1;
 HX711 balancaPrateleira2;
 HX711 balancaPrateleira3;
@@ -217,14 +220,16 @@ void setup()
 
   Serial.println("Sensores HX711 iniciados!");
 
-  // Escala calibrada para o Wokwi
-  balancaPrateleira1.set_scale(420.0);
+  // Escala para o HX711 "50kg" do Wokwi: leitura bruta de 0 a 21000 para 0 a 50 kg.
+  // 21000 / 50000 g = 0.42 -> get_units() retorna o peso em GRAMAS.
+  // (Com 420.0 o resultado saia em quilos e a quantidade ficava sempre perto de 0.)
+  balancaPrateleira1.set_scale(ESCALA_GRAMAS);
   tararBalanca(balancaPrateleira1, 1);
 
-  balancaPrateleira2.set_scale(420.0);
+  balancaPrateleira2.set_scale(ESCALA_GRAMAS);
   tararBalanca(balancaPrateleira2, 2);
 
-  balancaPrateleira3.set_scale(420.0);
+  balancaPrateleira3.set_scale(ESCALA_GRAMAS);
   tararBalanca(balancaPrateleira3, 3);
 
   Serial.println("Configuracao das balancas concluida!");
