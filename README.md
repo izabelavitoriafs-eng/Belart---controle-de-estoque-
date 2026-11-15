@@ -42,6 +42,7 @@ Portas: TCP `1883` (Python e ESP32) e WebSocket `wss://broker.hivemq.com:8884/mq
 ```text
 python/
   camera.py        # visão computacional e publicação MQTT
+  teste_mqtt.py    # teste do MQTT sem câmera (Python <-> broker <-> ESP32)
   teste.py         # teste simples do interpretador
 src/
   main.cpp         # firmware do ESP32 (Wi-Fi, MQTT, HX711)
@@ -74,20 +75,29 @@ Execute **a partir da raiz do projeto**. Na primeira execução, a Ultralytics b
 
 | Etapa | Situação |
 |---|---|
-| Importação do OpenCV | Testado |
-| ESP32: Wi-Fi, HX711 e conexão ao broker | Testado (Monitor Serial) |
-| Captura da câmera pelo OpenCV | Pendente: janela com imagem preta |
-| Reconhecimento pelo YOLO-World | Implementado, não validado |
-| Python → ESP32 via MQTT | Implementado, não validado |
-| Cálculo de quantidade (`set_scale(420.0)`) | Implementado, calibração de simulação não conferida |
-| ESP32 → broker → aplicativo | Pendente |
-| Fluxo completo | Pendente |
+| Captura da câmera pelo OpenCV | Validado |
+| Reconhecimento de Caneca e Garrafa (YOLO-World) | Validado |
+| Identificação da prateleira pela posição na imagem | Validado (depende do enquadramento da câmera) |
+| Python → broker → ESP32 | Validado |
+| Peso em gramas e cálculo da quantidade no Wokwi | Validado (10,2 kg de canecas → 29 unidades) |
+| Ausência momentânea de detecção não zera o estoque | Validado |
+| ESP32 → broker (`Produto,Quantidade`) | Validado com `teste_mqtt.py` |
+| Aplicativo React Native recebendo e exibindo as prateleiras | Pendente |
+| Fluxo completo até o aplicativo | Pendente |
+
+### Comportamentos importantes
+
+- **Escala do HX711:** o sensor `50kg` do Wokwi lê de 0 a 21000 para 0 a 50 kg; com `set_scale(21000 / 50000)` a leitura sai em gramas. 50 kg por prateleira é a capacidade máxima do Wokwi (cerca de 142 canecas ou 100 garrafas).
+- **`Nenhum`:** só é publicado depois de 3 ciclos seguidos sem detecção (45 quadros). Antes disso, o ESP32 mantém o último produto válido da prateleira.
+- **Prateleira:** o terminal do Python mostra a posição do objeto (`Posicao X/Y` em % da imagem). Prateleira 1: Y < 33%; 2: 33% a 66%; 3: Y > 66%. Use para ajustar o enquadramento da câmera.
+- **ID MQTT do ESP32:** recebe um sufixo aleatório a cada inicialização (`Belart_ESP32_xxxxxx`), porque no broker público dois clientes com o mesmo ID derrubam um ao outro.
+- Abra a simulação do Wokwi com todas as balanças em 0: a tara é feita na inicialização.
 
 ### Pendências conhecidas
 
-- `src/main.cpp` ainda contém o peso do azulejo, categoria retirada do escopo (aguardando ajuste pelo responsável do firmware).
-- Quando o Python publica `Nenhum`, o ESP32 passa a publicar quantidade `0`; a ausência momentânea de detecção não deveria zerar o estoque.
+- Integração com o aplicativo React Native.
 - Por ser um broker público, mensagens de terceiros podem chegar nos mesmos tópicos.
+- O ESP32 processa uma mensagem MQTT por ciclo de leitura, por isso as primeiras detecções podem levar alguns segundos para aparecer no Monitor Serial.
 
 ## Equipe
 
