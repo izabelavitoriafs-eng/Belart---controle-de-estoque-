@@ -1,26 +1,26 @@
-# Belart Smart Stock
+# Belart Smart Stock — Painel web
 
-Painel web para monitoramento inteligente do estoque da Belart. O sistema apresenta as leituras das três prateleiras, sinaliza níveis críticos e pode receber dados reais publicados pelo ESP32 via MQTT.
+Painel web para monitoramento do estoque da Belart. Ele recebe, pelo broker MQTT, os mesmos dados que o aplicativo (`../belartbh`) recebe do ESP32 e mostra o produto e a quantidade de cada uma das três prateleiras.
 
-> Projeto acadêmico de IoT desenvolvido a partir dos requisitos do Belart Smart Stock.
+> Projeto acadêmico de IoT desenvolvido a partir dos requisitos do Belart Smart Stock. O ESP32 e as balanças HX711 são simulados no Wokwi.
 
 ## Visão geral
 
-O painel foi criado para apoiar o administrador da loja no acompanhamento dos materiais usados na produção e sublimação. Ele combina a leitura de quantidade enviada pelos sensores com uma interface simples para tomada de decisão rápida.
+O painel apoia o administrador da loja no acompanhamento do estoque de **canecas** e **garrafas**. As quantidades vêm do ESP32, que combina o produto identificado pela câmera com o peso de cada prateleira.
 
-### O que já está funcionando
+### O que o painel faz
 
-- Visão geral das três prateleiras monitoradas.
-- Identificação do produto e quantidade atual.
-- Comparação automática com o limite mínimo.
-- Badges de `Estoque OK` e `Repor estoque`.
-- Filtro por todas as prateleiras, itens críticos ou estoque normal.
-- Configuração dos limites mínimos por prateleira.
-- Histórico dos últimos eventos recebidos.
-- Indicadores de ESP32, câmera e broker MQTT.
-- Simulação de leituras para demonstração sem hardware.
-- Notificações locais do navegador quando um item entra em estado crítico.
-- Conexão MQTT via WebSocket seguro com o broker HiveMQ.
+- Conecta automaticamente ao broker ao abrir a página e reconecta sozinho se a conexão cair.
+- Mostra as três prateleiras com produto, quantidade, limite mínimo e hora da última leitura.
+- Compara a quantidade com o limite mínimo do produto: `Estoque OK` ou `Repor estoque`.
+- Mostra `Aguardando dados` quando não há produto detectado, sem tratar isso como estoque zerado.
+- Filtra por todas as prateleiras, críticas ou com estoque OK.
+- Permite configurar o limite mínimo de cada produto.
+- Registra as mudanças recebidas (não repete leituras iguais).
+- Indica a conexão com o broker e se o ESP32 e a câmera estão enviando dados.
+- Envia notificação do navegador quando uma prateleira entra em estado crítico (se permitido).
+
+O painel não usa dados de exemplo: até a primeira mensagem do ESP32, as prateleiras aparecem como `Aguardando dados`.
 
 ## Tecnologias
 
@@ -37,12 +37,12 @@ O painel foi criado para apoiar o administrador da loja no acompanhamento dos ma
 Requisitos: Node.js e npm instalados.
 
 ```bash
-cd stock-app
+cd site
 npm install
 npm run dev
 ```
 
-Depois, abra `http://localhost:5173` no navegador.
+Depois, abra `http://localhost:5173` no navegador. Para ver dados, a simulação do ESP32 no Wokwi precisa estar rodando.
 
 ### Outros comandos
 
@@ -57,15 +57,17 @@ npm run build
 npm run preview
 ```
 
-## Modos de operação
+## Comunicação MQTT
 
-### Modo demonstração
+Mesma configuração do aplicativo:
 
-O sistema inicia com dados locais de exemplo, sem depender do ESP32. Use o botão **Simular leitura** para alterar aleatoriamente a quantidade de uma prateleira e observar a atualização do painel.
+```text
+wss://broker.hivemq.com:8884/mqtt
+```
 
-### Modo MQTT
+O navegador precisa de WebSocket seguro, por isso usa a porta `8884`. O Python e o ESP32 usam TCP na porta `1883`.
 
-Use **Conectar MQTT** para abrir uma conexão com o HiveMQ e assinar os três tópicos da aplicação:
+Tópicos assinados (refeitos a cada conexão):
 
 ```text
 belart/estoque/prateleira1
@@ -73,48 +75,52 @@ belart/estoque/prateleira2
 belart/estoque/prateleira3
 ```
 
-O payload esperado é uma string com produto e quantidade separados por vírgula:
+O ESP32 publica produto e quantidade separados por vírgula:
 
 ```text
-Caneca,12
-Garrafa,5
-Azulejo,0
+Caneca,29
+Garrafa,3
+Nenhum,0
+Aguardando IA...,0
 ```
 
-O painel interpreta o payload da seguinte forma:
+| Mensagem | Como aparece |
+| --- | --- |
+| `Caneca,29` / `Garrafa,3` | Produto e quantidade, com status pelo limite mínimo |
+| `Nenhum,0` | `Sem produto`, status `Aguardando dados` |
+| `Aguardando IA...,0` | O ESP32 ainda não recebeu nenhuma detecção da câmera; status `Aguardando dados` |
 
-| Parte | Exemplo | Resultado |
-| --- | --- | --- |
-| Produto | `Caneca` | Nome exibido no card |
-| Quantidade | `12` | Número usado no cálculo do estoque |
-
-A conexão configurada no app é:
-
-```text
-wss://broker.hivemq.com:8884/mqtt
-```
-
-O documento de requisitos também cita a porta `1883`. Como o navegador precisa de WebSocket seguro, esta implementação usa a porta `8884` indicada no requisito de conexão WSS.
+O botão **Reconectar MQTT** força uma nova conexão com o broker.
 
 ## Regra de estoque crítico
 
-Uma prateleira entra em estado crítico quando:
+Para Caneca e Garrafa, uma prateleira entra em estado crítico quando:
 
 ```text
-quantidade <= limite mínimo
+quantidade <= limite mínimo do produto
 ```
 
-Quando ocorre a transição para esse estado, o sistema registra um evento e solicita uma notificação local ao navegador, caso a permissão tenha sido concedida.
+Limites padrão, iguais aos do aplicativo: Caneca 30, Garrafa 20. Podem ser alterados pelo ícone de configuração de qualquer card (valem enquanto a página estiver aberta).
+
+Quando uma prateleira entra nesse estado, o painel registra um evento e envia uma notificação local do navegador, caso a permissão tenha sido concedida.
+
+## Indicadores dos sensores
+
+Os tópicos de estoque não trazem o estado dos dispositivos, então o painel deduz:
+
+- **ESP32:** enviando dados se chegou alguma mensagem nos últimos 10 segundos.
+- **Câmera:** detecções recebidas quando alguma prateleira deixa de mostrar `Aguardando IA...`, ou seja, o ESP32 já recebeu um produto do Python.
 
 ## Estrutura do projeto
 
 ```text
-stock-app/
-├── public/                 # Arquivos públicos
+site/
+├── public/
+│   └── belart-logo.png     # Logotipo da Belart (cabeçalho e ícone da aba)
 ├── src/
-│   ├── App.jsx             # Dashboard, estado e integração MQTT
-│   ├── App.css             # Estilos da interface responsiva
-│   ├── index.css           # Reset e estilos globais
+│   ├── App.jsx             # Painel, estado e integração MQTT
+│   ├── App.css             # Identidade visual roxa e amarela e layout responsivo
+│   ├── index.css           # Fonte e estilos globais
 │   └── main.jsx            # Entrada do React
 ├── index.html
 ├── package.json
@@ -125,27 +131,17 @@ stock-app/
 
 ```mermaid
 flowchart LR
-    A[Câmera + YOLO] --> B[ESP32]
-    C[Célula de carga HX711] --> B
-    B -->|Wi-Fi / MQTT| D[HiveMQ]
-    D -->|WebSocket seguro| E[Painel Smart Stock]
-    E --> F[Status e filtros]
-    E --> G[Alertas de reposição]
+    A[Câmera + YOLO-World] -->|MQTT: produto| D[Broker HiveMQ]
+    D --> B[ESP32 + HX711]
+    B -->|MQTT: Produto,Quantidade| D
+    D -->|WebSocket seguro| E[Painel web]
+    D -->|WebSocket seguro| F[Aplicativo]
 ```
 
 ## Próximas evoluções
 
-- Migrar o painel para React Native com Expo, caso o destino final seja um aplicativo mobile nativo.
-- Persistir produtos, limites e histórico em uma API ou banco de dados.
+- Persistir limites e histórico em uma API ou banco de dados.
 - Adicionar autenticação para administradores e colaboradores.
-- Trocar os ícones genéricos por imagens associadas a cada produto.
-- Integrar o modelo YOLO e o firmware do ESP32 em ambiente físico.
+- Trocar os ícones por imagens de cada produto.
 - Registrar entradas, retiradas e confirmação de reposição.
-- Adicionar testes automatizados para parsing MQTT e regras de estoque.
-
-## Referências do projeto
-
-Os requisitos funcionais e o contexto do sistema estão documentados nos arquivos:
-
-- `Especificacao-de-Requisitos-Belart-Smart-Stock.md`
-- `Trabalho-do-Grupo-Belart.md`
+- Adicionar testes automatizados para a leitura das mensagens MQTT e as regras de estoque.
