@@ -168,7 +168,7 @@ function App() {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <img className="brand-logo" src="/belart-logo.png" alt="Logotipo da Belart" width="44" height="44" />
+          <img className="brand-logo" src={`${import.meta.env.BASE_URL}belart-logo.png`} alt="Logotipo da Belart" width="44" height="44" />
           <div><strong>Belart</strong><span>SMART STOCK</span></div>
         </div>
         <div className="top-actions">
