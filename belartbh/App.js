@@ -38,8 +38,8 @@ const CardUser = ({ nome, nomeCompleto, statusOnline, cargo}) => {
 };
 
 /** Produtos do Belart Smart Stock e estoque mínimo de cada um */
-const PRODUTOS_VALIDOS = ['Caneca', 'Garrafa', 'Azulejo'];
-const LIMITE_MINIMO = { Caneca: 30, Garrafa: 20, Azulejo: 20 };
+const PRODUTOS_VALIDOS = ['Caneca', 'Garrafa'];
+const LIMITE_MINIMO = { Caneca: 30, Garrafa: 20 };
 
 /** Estado inicial das prateleiras, antes de chegar a primeira mensagem do ESP32 */
 const ESTADO_INICIAL = { item: 'Aguardando...', quantidade: 0 };
