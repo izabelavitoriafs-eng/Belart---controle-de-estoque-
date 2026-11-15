@@ -1,6 +1,8 @@
 
 # BIBLIOTECAS
 
+import time
+
 import cv2
 import paho.mqtt.client as mqtt
 from ultralytics import YOLOWorld
@@ -156,12 +158,15 @@ print("Pressione Q para encerrar.")
 
 # VARIÁVEIS DE CONTROLE
 
-frame_counter = 0
+# Publica a cada 1 segundo, independente de quantos quadros por segundo
+# a câmera e o YOLO conseguem processar (antes: a cada 15 quadros, o que
+# podia levar vários segundos com o YOLO rodando no processador).
+INTERVALO_PUBLICACAO_SEGUNDOS = 1.0
 
-INTERVALO_PUBLICACAO = 15
+ultima_publicacao = 0.0
 
 # Quantos ciclos de publicação seguidos sem detecção são necessários
-# para confirmar "Nenhum" (3 ciclos x 15 quadros = 45 quadros).
+# para confirmar "Nenhum" (3 ciclos x 1 s = cerca de 3 segundos).
 # Evita que uma perda momentânea da câmera zere o estoque no ESP32.
 CICLOS_PARA_CONFIRMAR_NENHUM = 3
 
@@ -206,11 +211,13 @@ try:
             altura
         )
 
-        frame_counter += 1
-
         # PUBLICAÇÃO DOS RESULTADOS NO MQTT
 
-        if frame_counter % INTERVALO_PUBLICACAO == 0:
+        agora = time.time()
+
+        if agora - ultima_publicacao >= INTERVALO_PUBLICACAO_SEGUNDOS:
+
+            ultima_publicacao = agora
 
             for id_prateleira in (1, 2, 3):
 

@@ -88,7 +88,7 @@ Execute **a partir da raiz do projeto**. Na primeira execução, a Ultralytics b
 ### Comportamentos importantes
 
 - **Escala do HX711:** o sensor `50kg` do Wokwi lê de 0 a 21000 para 0 a 50 kg; com `set_scale(21000 / 50000)` a leitura sai em gramas. 50 kg por prateleira é a capacidade máxima do Wokwi (cerca de 142 canecas ou 100 garrafas).
-- **`Nenhum`:** só é publicado depois de 3 ciclos seguidos sem detecção (45 quadros). Antes disso, o ESP32 mantém o último produto válido da prateleira.
+- **`Nenhum`:** só é publicado depois de 3 ciclos seguidos sem detecção (cerca de 3 segundos; o Python publica a cada 1 segundo). Antes disso, o ESP32 mantém o último produto válido da prateleira.
 - **Prateleira:** o terminal do Python mostra a posição do objeto (`Posicao X/Y` em % da imagem). Prateleira 1: Y < 33%; 2: 33% a 66%; 3: Y > 66%. Use para ajustar o enquadramento da câmera.
 - **ID MQTT do ESP32:** recebe um sufixo aleatório a cada inicialização (`Belart_ESP32_xxxxxx`), porque no broker público dois clientes com o mesmo ID derrubam um ao outro.
 - Abra a simulação do Wokwi com todas as balanças em 0: a tara é feita na inicialização.
@@ -97,7 +97,6 @@ Execute **a partir da raiz do projeto**. Na primeira execução, a Ultralytics b
 
 - Integração com o aplicativo React Native.
 - Por ser um broker público, mensagens de terceiros podem chegar nos mesmos tópicos.
-- O ESP32 processa uma mensagem MQTT por ciclo de leitura, por isso as primeiras detecções podem levar alguns segundos para aparecer no Monitor Serial.
 
 ## Equipe
 

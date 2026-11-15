@@ -233,6 +233,19 @@ void setup()
   Serial.println("Configuracao das balancas concluida!");
 }
 
+// Fica processando mensagens MQTT durante o tempo indicado.
+// Cada mqttClient.loop() lê no máximo UMA mensagem; chamando várias vezes,
+// as mensagens do Python não se acumulam em fila.
+void aguardarProcessandoMQTT(unsigned long tempoMs)
+{
+  unsigned long inicio = millis();
+  do
+  {
+    mqttClient.loop();
+    delay(10);
+  } while (millis() - inicio < tempoMs);
+}
+
 void loop()
 {
   // Garante reconexão contínua ao Broker
@@ -245,12 +258,15 @@ void loop()
   // Processamento e publicação do estoque
   contarUnidades(balancaPrateleira1, prateleira1);
   Serial.println("=======================================================");
+  aguardarProcessandoMQTT(50);
 
   contarUnidades(balancaPrateleira2, prateleira2);
   Serial.println("=======================================================");
+  aguardarProcessandoMQTT(50);
 
   contarUnidades(balancaPrateleira3, prateleira3);
   Serial.println("=======================================================");
 
-  delay(1000); // Intervalo de atualização
+  // Intervalo de atualização: 500 ms, processando MQTT durante a espera
+  aguardarProcessandoMQTT(500);
 }
